@@ -3,9 +3,10 @@ id: f4a5b6c7-8901-23ab-cdef-444444444444
 status: test
 description: Detects registry modifications targeting Windows Run keys to achieve persistence.
 references:
-    - https://attack.mitre.org/techniques/T1547.001/
+    - https://attack.mitre.org/techniques/T1547/001/
 author: Cyberion Defense Labs
 date: 2026/08/09
+modified: 2026/10/26
 tags:
     - attack.persistence
     - attack.t1547.001
