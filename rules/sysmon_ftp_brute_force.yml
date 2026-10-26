@@ -1,21 +1,27 @@
-title: Potential FTP Brute Force or Multiple Logon Failures
-id: f1a2b3c4-5678-90ab-cdef-111111111111
+title: Potential Authentication Brute Force - Multiple Failed Logons
+id: a4b5c6d7-8901-23ab-cdef-444444444444
 status: test
-description: Detects command-line FTP execution or repeated failed authentication events indicating potential brute force activity.
+description: Detects failed logon events (Event ID 4625) indicating potential brute-force or credential guessing activity against network or interactive services.
 references:
     - https://attack.mitre.org/techniques/T1110/
 author: Cyberion Defense Labs
 date: 2026/08/05
+modified: 2026/10/26
 tags:
     - attack.credential-access
     - attack.t1110
 logsource:
-    category: process_creation
+    service: security
     product: windows
 detection:
     selection:
-        Image|endswith: '\ftp.exe'
+        EventID: 4625
+        LogonType:
+            - 3   # Network
+            - 8   # NetworkCleartext
+            - 10  # RemoteInteractive (RDP)
     condition: selection
 falsepositives:
-    - Legitimate administrative FTP file transfers or automated maintenance scripts.
+    - User mistyping passwords during interactive logons.
+    - Legacy automated backup services with expired credentials.
 level: medium
