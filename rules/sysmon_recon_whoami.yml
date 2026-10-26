@@ -1,11 +1,12 @@
 title: System Discovery via Whoami Command Execution
 id: f2a3b4c5-6789-01ab-cdef-222222222222
 status: test
-description: Detects execution of whoami.exe used by adversaries during initial access discovery phases.
+description: Detects execution of whoami.exe used by adversaries during initial discovery phases, excluding standard user initialization logon scripts.
 references:
     - https://attack.mitre.org/techniques/T1033/
 author: Cyberion Defense Labs
 date: 2026/08/09
+modified: 2026/10/26
 tags:
     - attack.discovery
     - attack.t1033
@@ -15,7 +16,10 @@ logsource:
 detection:
     selection:
         Image|endswith: '\whoami.exe'
-    condition: selection
+    filter_parent:
+        ParentImage|endswith:
+            - '\UserInit.exe'
+    condition: selection and not filter_parent
 falsepositives:
-    - System administrator troubleshooting sessions or login script executions.
+    - System administrator troubleshooting sessions or login script executions via UserInit.
 level: low
