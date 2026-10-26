@@ -1,34 +1,130 @@
-# MITRE ATT&CK Coverage Matrix
+# MITRE ATT&CK Detection Coverage Matrix & Defensive Gap Analysis
 
-## Overview
-This document tracks detection coverage provided by the 15 Sigma rules authored in `rules/` mapped directly to the MITRE ATT&CK Enterprise Framework.
-
----
-
-## Detection Coverage Mapping
-
-| Tactic | Technique ID | Technique Name | Status | Rule ID Mapping | Rule File Name |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **Credential Access** | T1003.001 | OS Credential Dumping: LSASS | Covered | `a2b3c4d5-6789-01ab-cdef-222222222222` | `sysmon_lsass_dump.yml` |
-| **Credential Access** | T1003.001 | Multi-Event LSASS Access Correlation | Covered | `c0d1e2f3-4567-89ab-cdef-101010101010` | `correlation_ps_lsass_dump.yml` |
-| **Credential Access** | T1110 | Brute Force | Covered | `a4b5c6d7-8901-23ab-cdef-444444444444` | `sysmon_ftp_brute_force.yml` |
-| **Defense Evasion** | T1027 | Encoded PowerShell Command | Covered | `a1b2c3d4-5678-90ab-cdef-111111111111` | `sysmon_powershell_encoded.yml` |
-| **Defense Evasion** | T1078 | Valid Accounts Abuse | Covered | `a8b9c0d1-2345-67ab-cdef-888888888888` | `sysmon_valid_accounts.yml` |
-| **Execution** | T1059.001 | PowerShell Execution | Covered | `a7b8c9d0-1234-56ab-cdef-777777777777` | `sysmon_cmd_execution.yml` |
-| **Execution** | T1059.001 | Outbound PowerShell Network Socket | Covered | `f5a6b7c8-9012-34ab-cdef-555555555555` | `sysmon_net_powershell_conn.yml` |
-| **Lateral Movement**| T1021.002 | SMB/Windows Admin Shares (PsExec) | Covered | `a3b4c5d6-7890-12ab-cdef-333333333333` | `sysmon_psexec_lateral.yml` |
-| **Persistence** | T1543.003 | Windows Service Creation | Covered | `a5b6c7d8-9012-34ab-cdef-555555555555` | `sysmon_service_creation.yml` |
-| **Persistence** | T1543.003 | Service Manager SC.exe Creation | Covered | `f3a4b5c6-7890-12ab-cdef-333333333333` | `sysmon_persistence_service.yml` |
-| **Persistence** | T1547.001 | Registry Run Keys Modification | Covered | `f4a5b6c7-8901-23ab-cdef-444444444444` | `sysmon_reg_run_persistence.yml` |
-| **Discovery** | T1033 | System Owner/User Discovery | Covered | `a6b7c8d9-0123-45ab-cdef-666666666666` | `sysmon_whoami_recon.yml` |
-| **Discovery** | T1033 | System Discovery via Whoami | Covered | `f2a3b4c5-6789-01ab-cdef-222222222222` | `sysmon_recon_whoami.yml` |
-| **Exfiltration** | T1041 | Exfiltration Over C2 / FTP Script | Covered | `a9b0c1d2-3456-78ab-cdef-999999999999` | `sysmon_ftp_exfil.yml` |
-| **Exfiltration** | T1041 | Outbound Network Connection via FTP| Covered | `f1a2b3c4-5678-90ab-cdef-111111111111` | `sysmon_net_ftp_exfil.yml` |
-| **Command & Control**| T1071.001 | C2 Web Protocols (Beaconing) | Not Covered | N/A | Hunted in `HUNT_001_C2_BEACONING.md` |
+**Project:** Cyberion Defense Labs Detection Engineering (CDL-DET-V2)  
+**Repository:** `cdl-det-v2-main`  
+**Phase:** Phase 4 — MITRE ATT&CK Coverage Matrix & Telemetry Data Dictionary  
+**Last Updated:** August 2026  
+**Status:** Grounded Engineering Baseline (Reconciled against Active Rule YAMLs and Validated Telemetry)
 
 ---
 
-## Summary Metrics
-- **Total MITRE ATT&CK Techniques Mapped:** 11 Techniques across 7 Tactics.
-- **Total Rules Traced:** 15 Active Sigma Rules.
-- **Coverage Percentage:** 100% of authored rules traced to Rule IDs and validated against test telemetry.
+## 1. Executive Overview & Methodology
+
+This document provides an analyst-oriented, evidence-grounded MITRE ATT&CK Enterprise coverage assessment for the CDL Detection Engineering project. Rather than treating static Sigma rule definitions or pySigma schema parsing as proof of detection efficacy, this matrix evaluates each technique against empirical evidence gathered during Phase 3 automated validation (`tests/validate_rules.py`) and empirical telemetry analysis (`data/parse_logs.ipynb`).
+
+### Coverage Classification Schema
+
+To prevent misleading claims of "100% detection coverage", all techniques and rules are classified into five explicit, mutually exclusive categories:
+
+| Classification | Definition | Efficacy Criteria |
+| :--- | :--- | :--- |
+| **Validated detection** | A representative attack event was observed in telemetry and the detection logic was tested and confirmed to trigger as intended. | Passing automated or notebook test with zero false negatives on verified attack telemetry. |
+| **Rule exists — telemetry validation incomplete** | A production Sigma rule exists with valid detection logic, but adequate empirical telemetry evidence is absent, blocked, or failed in testing. | Rule passes pySigma schema validation, but dataset lacks target event IDs or expected payload indicators. |
+| **Partial coverage** | The rule covers only a specific subset of the technique, targets narrow CLI parameters/LOLBins, or is vulnerable to common evasions. | Rule triggers on specific switches (e.g. `cmd.exe /c` or `-enc`) but misses interactive shells, API calls, or alternative utilities. |
+| **Telemetry gap** | Telemetry required to observe the technique is entirely absent from the collected artifacts or logging configuration. | Log source/channel (e.g. Web Proxy, Windows System Event 7045, Sysmon Event 8) is uncollected. |
+| **No rule mapped** | No rule currently exists in `rules/` providing defensible coverage for the technique, identifying an open backlog priority. | Technique identified during threat modeling or hunting but lacks detection implementation. |
+
+---
+
+## 2. MITRE ATT&CK Enterprise Technique Assessment Matrix
+
+The following matrix documents **22 distinct MITRE ATT&CK techniques and sub-techniques** across 9 tactics, reconciling all 15 active production rules, threat hunt hypotheses, and defensive gaps.
+
+| Technique ID | Technique / Sub-Technique Name | Tactic | Related Production Rule(s) & Current UUID(s) | Coverage Classification | Log Source / Telemetry Requirement | Validation Evidence or Exact Validation Limitation | Coverage Gap & Recommended Next Action |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **T1003.001** | OS Credential Dumping: LSASS Memory | Credential Access | `rules/sysmon_lsass_dump.yml`<br>`a2b3c4d5-6789-01ab-cdef-222222222222`<br><br>`rules/sysmon_whoami_recon.yml`<br>`b9c0d1e2-3456-78ab-cdef-999999999999` | **Validated detection** *(for Sysmon 10 rule)*<br><br>**Rule exists — telemetry validation incomplete** *(for PowerShell rule)* | Sysmon Event ID 10 (`process_access`)<br><br>PowerShell Operational Event ID 4103/4104 | **PASS** in `tests/validate_rules.py`: Matched `powershell.exe` opening handle to `lsass.exe` with `GrantedAccess` `0x1010` on WORKSTATION5.<br><br>**FAIL** in `tests/validate_rules.py` for PowerShell: 1,695 Event 4103 records present, but Empire in-memory jobs (`Receive-AgentJob`) lacked plaintext `Invoke-Mimikatz`. | Sysmon 10 covers direct handle creation. Gap: Does not detect handle duplication (`DuplicateHandle`) or mini-dump via `comsvcs.dll` / Process Explorer. Next Action: Add LSASS handle duplication rules and unhooked memory inspection. |
+| **T1033** | System Owner/User Discovery | Discovery | `rules/sysmon_recon_whoami.yml`<br>`f2a3b4c5-6789-01ab-cdef-222222222222` | **Validated detection** | Sysmon Event ID 1 (`process_creation`) | **PASS** in `tests/validate_rules.py`: Matched execution of `whoami.exe` spawned by `powershell.exe` at 14:32:45 UTC. Benign `userinit.exe` parent filter verified. | Rule targets `whoami.exe` binary execution specifically. Gap: Misses user discovery via .NET APIs `[System.Security.Principal.WindowsIdentity]::GetCurrent()`, `net user`, or environment variables (`%USERNAME%`). Next Action: Monitor API-level and environment queries. |
+| **T1059.001** | Command and Scripting Interpreter: PowerShell | Execution | `rules/sysmon_powershell_encoded.yml`<br>`b3c4d5e6-7890-12ab-cdef-333333333333`<br><br>`rules/sysmon_net_powershell_conn.yml`<br>`f5a6b7c8-9012-34ab-cdef-555555555555`<br><br>`rules/sysmon_whoami_recon.yml`<br>`b9c0d1e2-3456-78ab-cdef-999999999999` | **Partial coverage** | Sysmon Event ID 1 (`process_creation`)<br><br>Sysmon Event ID 3 (`network_connection`)<br><br>PowerShell Operational 4103/4104 | Mordor dataset contains 2,940 Event 800 events and 1,695 Event 4103 events. However, initial encoded agent launcher occurred prior to log trace or was uncaptured in Event 1; PowerShell network connection targeted internal RFC1918 IPs filtered out by rule. | Rules focus on explicit CLI parameters (`-e`, `-enc`), outbound non-RFC1918 sockets, and plaintext scriptblock keywords. Gap: Misses un-encoded interactive scripts, custom obfuscation, and internal lateral C2. Next Action: Deploy AST de-obfuscation rules and internal C2 baseline filters. |
+| **T1059.003** | Command and Scripting Interpreter: Windows Command Shell | Execution | `rules/sysmon_cmd_execution.yml`<br>`c4d5e6f7-8901-23ab-cdef-444444444444` | **Partial coverage** | Sysmon Event ID 1 (`process_creation`) | In Mordor JSON, adversary executed primarily via PowerShell; `cmd.exe` process creation not observed. In `exec_sysmon_1_ftp.evtx`, `cmd.exe /c` is present but unparsed programmatically by test runner. | Rule triggers only when `cmd.exe` executes with `/c`, `/k`, or `/r` flags. Gap: Interactive command shell execution, batch file execution without switches, and command shell spoofing evade detection. Next Action: Expand LOLBin parentage monitoring. |
+| **T1110** | Brute Force | Credential Access | `rules/sysmon_ftp_brute_force.yml`<br>`a4b5c6d7-8901-23ab-cdef-444444444444` | **Rule exists — telemetry validation incomplete** | Windows Security Event ID 4625 (`security`) | **BLOCKED** in `tests/validate_rules.py`: Windows Security Event ID 4625 is completely absent (0 records) from the current Mordor dataset baseline. | Detection requires >= 5 failed logon attempts within 5 minutes. Gap: Slow/distributed password sprays (< 5 attempts per window) or account lockouts evade this rule. Next Action: Ingest authentic brute-force/spray dataset containing Event 4625. |
+| **T1041** | Exfiltration Over C2 | Exfiltration | `rules/sysmon_ftp_exfil.yml`<br>`f7a8b9c0-1234-56ab-cdef-777777777777`<br><br>`rules/sysmon_net_ftp_exfil.yml`<br>`f1a2b3c4-5678-90ab-cdef-111111111111` | **Rule exists — telemetry validation incomplete** | Sysmon Event ID 1 (`process_creation`)<br><br>Sysmon Event ID 3 (`network_connection`) | Binary EVTX `exec_sysmon_1_ftp.evtx` contains `ftp.exe -s:...` execution strings, but EVTX is unparsed in automated suite; Mordor JSON contains no FTP activity. | Rules monitor `ftp.exe` CLI switches (`-s:`, `-i`) and standard FTP network ports (20, 21, 989, 990). Gap: Non-standard port exfiltration or alternative LOLBin upload tools (`curl`, `certutil`) are not detected. Next Action: Ingest parsed EVTX and add multi-utility exfil rules. |
+| **T1543.003** | Create or Modify System Process: Windows Service | Persistence, Privilege Escalation | `rules/sysmon_persistence_service.yml`<br>`f3a4b5c6-7890-12ab-cdef-333333333333`<br><br>`rules/sysmon_service_creation.yml`<br>`e6f7a8b9-0123-45ab-cdef-666666666666` | **Rule exists — telemetry validation incomplete** | Sysmon Event ID 1 (`process_creation`)<br><br>Windows System Event ID 7045 (`system`) | `sc.exe` was not executed in the Mordor trace. System channel Event 7045 is entirely absent from Mordor JSON dataset, resulting in **BLOCKED** status in automated validation runner. | `sysmon_persistence_service.yml` only covers CLI `sc.exe`. `sysmon_service_creation.yml` relies on System Event 7045. Gap: Service creation via PowerShell (`New-Service`), WMI, or direct Registry manipulation evades `sc.exe` rule. Next Action: Ingest System log artifacts with Event 7045. |
+| **T1027** | Obfuscated/Encoded Files or Information | Defense Evasion | `rules/sysmon_powershell_encoded.yml`<br>`b3c4d5e6-7890-12ab-cdef-333333333333` | **Partial coverage** | Sysmon Event ID 1 (`process_creation`) | pySigma validation passed. Mordor baseline contains encoded modules inside memory sessions, but no CLI execution with literal `-enc` switches was logged in Sysmon Event 1. | Rule triggers strictly on CLI commandline arguments (`-e`, `-enc`, `-encodedcommand`). Gap: Variable substitution (`iex $env:payload`), string reversal, and secure string decompression evade CLI pattern matching. Next Action: Implement ScriptBlock entropy and AST-based de-obfuscation detections. |
+| **T1021.002** | Remote Services: SMB/Windows Admin Shares | Lateral Movement | `rules/sysmon_psexec_lateral.yml`<br>`d5e6f7a8-9012-34ab-cdef-555555555555` | **Partial coverage** | Sysmon Event ID 1 (`process_creation`) | pySigma validation passed. Mordor dataset evaluated is a local post-exploitation credential dump session; PsExec lateral movement execution was not performed in this trace. | Rule searches for binary names `psexec.exe`, `psexec64.exe` or CLI flag `-accepteula`. Gap: Renamed binaries, custom SMB named pipe lateral movement, or Impacket `smbexec`/`wmiexec` evade detection. Next Action: Monitor SMB pipe creation (Sysmon 17/18) and remote service execution. |
+| **T1547.001** | Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder | Persistence, Privilege Escalation | `rules/sysmon_reg_run_persistence.yml`<br>`f4a5b6c7-8901-23ab-cdef-444444444444` | **Partial coverage** | Sysmon Event ID 13 (`registry_set`) | Sysmon Event ID 13 is present in Mordor JSON (45 records), but all relate to benign system activity; no modifications to Run/RunOnce keys occurred in this dataset. | Rule monitors `TargetObject` containing `CurrentVersion\Run*`. Gap: Misses Startup folder file drops (Sysmon Event 11), Scheduled Tasks (Event 4698), and alternative autostart locations (Active Setup, AppInit_DLLs). Next Action: Pair registry monitoring with file drop detections. |
+| **T1078** | Valid Accounts | Defense Evasion, Persistence, Privilege Escalation, Initial Access | `rules/sysmon_valid_accounts.yml`<br>`a8b9c0d1-2345-67ab-cdef-888888888888` | **Rule exists — telemetry validation incomplete** | Windows Security Event ID 4672 (`security`) | **BLOCKED** in `tests/validate_rules.py`: Dataset contains 10 Event 4672 records, but ALL 10 belong to domain controller computer account (`MONDORDC$`) and were correctly filtered out. Human administrative logon telemetry was absent. | Rule filters machine accounts (`SubjectUserName` ending with `'$'`) and checks for `SeDebugPrivilege`. Gap: Does not detect logon anomaly patterns (unusual hours, geographical impossible travel, or unprivileged account abuse). Next Action: Ingest interactive human admin logon telemetry. |
+| **T1071.001** | Application Layer Protocol: Web Protocols | Command and Control | *No direct Sigma rule authored*<br>*(Hunted in `HUNT_001_C2_BEACONING.md`)* | **Telemetry gap** | Web Proxy Logs, HTTP/HTTPS request headers, Zeek `http.log` | Hunt #001 evaluated `empire_mimikatz_logonpasswords_2020-08-07103224.json` and `exec_sysmon_1_ftp.evtx`; findings were negative/inconclusive because web proxy/HTTP header telemetry is absent from the repository. | Sysmon Event ID 3 records IP/port connections but lacks application-layer URLs, HTTP methods, and User-Agents. Next Action: Ingest Zeek network logs or proxy telemetry with full URI stems. |
+| **T1048.003** | Exfiltration Over Alternative Protocol: Exfiltration Over Unencrypted Non-C2 Protocol | Exfiltration | `rules/sysmon_net_ftp_exfil.yml`<br>`f1a2b3c4-5678-90ab-cdef-111111111111` | **Partial coverage** | Sysmon Event ID 3 (`network_connection`) | Discrepancy Note: Rule is tagged `attack.t1041` (C2 exfiltration) in YAML, but detection logic monitors standard FTP ports (20, 21), accurately aligning with ATT&CK sub-technique T1048.003. Sysmon 3 events present in Mordor JSON but contain no FTP destination ports. | Rule detects outbound connections over ports 20, 21, 989, 990 from `ftp.exe`. Gap: Exfiltration over encrypted protocols (SFTP/SSH port 22, HTTPS port 443, cloud storage APIs) completely evades this rule. Next Action: Reconcile YAML tag to T1048.003 and develop cloud storage exfil rules. |
+| **T1053.005** | Scheduled Task/Job: Scheduled Task | Execution, Persistence, Privilege Escalation | *No rule mapped* | **Telemetry gap** | Windows Security Event ID 4698 / 4702, Sysmon Event ID 1 (`schtasks.exe`) | Windows Security Event ID 4698 is entirely absent (0 records) in the Mordor JSON dataset. Neither `schtasks.exe` nor Task Scheduler RPC events were observed. | Significant enterprise persistence technique. Zero coverage currently exists in `rules/`. Next Action: Author a Sigma rule for `schtasks.exe /create` (Sysmon 1) and Security Event 4698. |
+| **T1055** | Process Injection | Defense Evasion, Privilege Escalation | *No rule mapped* | **No rule mapped** | Sysmon Event ID 8 (`CreateRemoteThread`), Sysmon Event ID 7 (`image_load`), EDR telemetry | Sysmon Event ID 8 is completely absent (0 records) in Mordor JSON. Sysmon Event ID 7 is present (81 records) but unanalyzed for injection primitives. No rule authored in `rules/`. | Injection is a primary defense evasion mechanism. Gap: No rule detects remote thread creation or DLL hollowing. Next Action: Author rule targeting Sysmon Event 8 targeting sensitive processes (`lsass.exe`, `explorer.exe`). |
+| **T1003.002** | OS Credential Dumping: Security Account Manager (SAM) | Credential Access | *No rule mapped* | **No rule mapped** | Sysmon Event ID 1 (`reg.exe`, `vssadmin.exe`), System Event ID 11 (`SAM` file copy) | Not observed in Mordor dataset. No rule authored in `rules/`. | Adversaries dumping offline SAM hives bypass LSASS memory access rules. Gap: No detection for `reg save HKLM\SAM` or volume shadow copy theft. Next Action: Author rule for SAM/SYSTEM hive registry export. |
+| **T1046** | Network Service Discovery | Discovery | *No rule mapped* | **Telemetry gap** | Security Event ID 5156/5158, Sysmon Event ID 3 | Mordor JSON contains 211 Event 5156 records and 195 Event 5158 records (Windows Filtering Platform), confirming presence of connection data, but no detection rule has been authored. | Adversaries routinely scan internal subnets following initial access. Gap: Current rules only inspect process execution, not port scan patterns. Next Action: Author a threshold rule on rapid destination port attempts in Event 5156. |
+| **T1082** | System Information Discovery | Discovery | *No rule mapped* | **No rule mapped** | Sysmon Event ID 1 (`systeminfo.exe`, `hostname.exe`, `wmic.exe`) | Discovery utilities were not invoked in the Mordor trace; only `whoami.exe` was executed. No rule in `rules/` covers general system information gathering. | Attackers use systeminfo/hostname during initial triage. Gap: Current discovery coverage is limited strictly to `whoami.exe`. Next Action: Author aggregated discovery rule for standard Windows reconnaissance LOLBins. |
+| **T1016** | System Network Configuration Discovery | Discovery | *No rule mapped* | **No rule mapped** | Sysmon Event ID 1 (`ipconfig.exe`, `route.exe`, `arp.exe`, `netsh.exe`) | Unobserved in Mordor dataset. No rule authored in `rules/`. | Reconnaissance of network interfaces and routing tables is standard post-compromise activity. Gap: Zero detection coverage. Next Action: Author rule for batch network discovery command sequences. |
+| **T1562.001** | Impair Defenses: Disable or Modify Tools | Defense Evasion | *No rule mapped* | **No rule mapped** | Sysmon Event ID 1 (`sc stop`, `net stop`, `Set-MpPreference`), Sysmon Event ID 13 | Unobserved in Mordor dataset. No rule authored in `rules/`. | Adversaries routinely disable Windows Defender or EDR services before deploying payloads. Gap: Zero detection coverage for security tool tampering. Next Action: Author rule targeting `Set-MpPreference -DisableRealtimeMonitoring` and Defender service termination. |
+| **T1070.001** | Indicator Removal: Clear Windows Event Logs | Defense Evasion | *No rule mapped* | **No rule mapped** | Windows Security Event ID 1102, Windows System Event ID 104, Sysmon Event ID 1 (`wevtutil.exe cl`) | Event clearing was not executed in Mordor trace. No rule authored in `rules/`. | High-severity anti-forensic activity. Gap: No rule detects audit log clearing or `wevtutil` abuse. Next Action: Author high-severity detection for Security Event 1102 and System Event 104. |
+| **T1047** | Windows Management Instrumentation (WMI) | Execution | *No rule mapped* | **Telemetry gap** | `Microsoft-Windows-WMI-Activity/Operational` Event ID 5857/5861, Sysmon Event ID 19/20/21 | Mordor dataset contains exactly 1 solitary Event ID 5857 event. WMI operational logging is sparse, and no WMI execution/subscription rules exist. | WMI is extensively used for living-off-the-land execution and persistence. Gap: No detection for `wmic process call create` or WMI event consumers. Next Action: Enable detailed WMI auditing and author WMI execution rules. |
+
+---
+
+## 3. Dedicated Assessment: Multi-Event Temporal Correlation Rule
+
+In accordance with Phase 3 validation findings, correlation rules operate under different execution requirements than single-event rules and are tracked independently.
+
+### Correlation Rule Profile
+- **Rule File:** `rules/correlation_ps_lsass_dump.yml`
+- **Rule ID (UUID):** `c0d1e2f3-4567-89ab-cdef-101010101010`
+- **Title:** Correlation - PowerShell Execution Followed by LSASS Process Access
+- **Action Type:** `action: correlation` (SigmaHQ Correlation Specification)
+- **Correlation Type:** `type: temporal`
+- **Referenced Rules:**
+  1. `sysmon_net_powershell_conn.yml` (UUID: `f5a6b7c8-9012-34ab-cdef-555555555555`) OR PowerShell Process Creation
+  2. `sysmon_lsass_dump.yml` (UUID: `a2b3c4d5-6789-01ab-cdef-222222222222`)
+- **Timespan:** `timespan: 5m`
+- **Grouping Fields:** `group-by: [ComputerName]`
+- **Mapped ATT&CK Tags:** `attack.credential-access`, `attack.execution`, `attack.t1003.001`, `attack.t1059.001`
+- **Coverage Classification:** **Rule exists — telemetry validation incomplete**
+
+### Telemetry & Validation Execution Status
+- **Structural Integrity:** **PASS** (Complies with SigmaHQ correlation specification; pySigma core loader recognizes structural syntax, while multi-rule compilation requires correlation engine plugin).
+- **Execution Engine Status:** **NOT EXECUTED BY CORRELATION BACKEND**. The repository contains pySigma and PyYAML, but does not deploy an active stateful stream-correlation engine (such as a SIEM correlation worker, pySigma correlation backend, or temporal event sequencer).
+- **Ground Truth Telemetry Findings:**
+  - Automated inspection of `empire_mimikatz_logonpasswords_2020-08-07103224.json` confirmed that both underlying event primitives occurred on host `WORKSTATION5`:
+    1. PowerShell activity initiated at `10:32:45 UTC`
+    2. LSASS process access handle (`0x1010`) opened at `10:32:56 UTC`
+    3. Elapsed time delta: **11 seconds** (well within the 5-minute correlation window).
+- **Technical Limitation & Next Steps:** While the telemetry validates the attack sequence in reality, declaring the correlation rule "validated" requires executing the query across a temporal correlation backend.
+
+---
+
+## 4. Active Production Rule Reconciliation Inventory
+
+The following table reconciles all 15 active production Sigma rule files in `rules/`, verifying their current UUIDs, log sources, ATT&CK tag mappings, and empirical test outcomes.
+
+| # | Rule Filename | Current Unique UUID | Rule Title | Log Source Category / Service | MITRE ATT&CK Tags in YAML | Empirical Test Result (`validate_rules.py`) | Technical Note / Tag Nuance |
+| :---: | :--- | :--- | :--- | :--- | :--- | :---: | :--- |
+| 1 | `correlation_ps_lsass_dump.yml` | `c0d1e2f3-4567-89ab-cdef-101010101010` | Correlation - PowerShell Execution Followed by LSASS Process Access | `action: correlation` (temporal) | `attack.credential-access`<br>`attack.execution`<br>`attack.t1003.001`<br>`attack.t1059.001` | **NOT RUN** | Temporal correlation; underlying events observed (delta 11s), requires stateful backend. |
+| 2 | `sysmon_cmd_execution.yml` | `c4d5e6f7-8901-23ab-cdef-444444444444` | Suspicious Command Shell Execution | `process_creation` (windows) | `attack.execution`<br>`attack.t1059.003` | *Unobserved* | Previously mistagged in old docs as T1059.001. Accurately targets `cmd.exe /c` (T1059.003). |
+| 3 | `sysmon_ftp_brute_force.yml` | `a4b5c6d7-8901-23ab-cdef-444444444444` | Potential Authentication Brute Force - Multiple Failed Logons | `security` (windows) | `attack.credential-access`<br>`attack.t1110` | **BLOCKED** | Targets Event ID 4625; absent from Mordor dataset baseline. UUID collision resolved in Phase 2. |
+| 4 | `sysmon_ftp_exfil.yml` | `f7a8b9c0-1234-56ab-cdef-777777777777` | Data Exfiltration via Command Line FTP | `process_creation` (windows) | `attack.exfiltration`<br>`attack.t1041` | *Unparsed EVTX* | Targets `ftp.exe -s:`. Present in `exec_sysmon_1_ftp.evtx` binary artifact, but unparsed by Python suite. |
+| 5 | `sysmon_lsass_dump.yml` | `a2b3c4d5-6789-01ab-cdef-222222222222` | LSASS Process Memory Access for Credential Dumping | `process_access` (windows) | `attack.credential-access`<br>`attack.t1003.001` | **PASS** | Validated detection against Mordor JSON: handle `0x1010` from `powershell.exe` to `lsass.exe`. |
+| 6 | `sysmon_net_ftp_exfil.yml` | `f1a2b3c4-5678-90ab-cdef-111111111111` | Outbound Network Connection via FTP Executable | `network_connection` (windows) | `attack.exfiltration`<br>`attack.t1041` | *Unobserved* | Rule tags T1041; logic targets ports 20/21 which aligns directly with T1048.003. Absent in Mordor JSON. |
+| 7 | `sysmon_net_powershell_conn.yml` | `f5a6b7c8-9012-34ab-cdef-555555555555` | Outbound Network Connection Triggered by PowerShell | `network_connection` (windows) | `attack.execution`<br>`attack.t1059.001` | *Filtered* | PowerShell connections in Mordor JSON targeted RFC1918 internal IPs, correctly filtered out by rule. |
+| 8 | `sysmon_persistence_service.yml` | `f3a4b5c6-7890-12ab-cdef-333333333333` | Service Installation via SC.EXE | `process_creation` (windows) | `attack.persistence`<br>`attack.privilege-escalation`<br>`attack.t1543.003` | *Unobserved* | Monitors `sc.exe create/config`. Not executed in Mordor trace. |
+| 9 | `sysmon_powershell_encoded.yml` | `b3c4d5e6-7890-12ab-cdef-333333333333` | Encoded PowerShell Command Execution | `process_creation` (windows) | `attack.execution`<br>`attack.defense-evasion`<br>`attack.t1059.001`<br>`attack.t1027` | *Unobserved* | Targets CLI parameters (`-enc`). Adversary in Mordor operated via in-memory jobs; CLI unobserved. |
+| 10 | `sysmon_psexec_lateral.yml` | `d5e6f7a8-9012-34ab-cdef-555555555555` | PsExec Lateral Movement Execution | `process_creation` (windows) | `attack.lateral-movement`<br>`attack.t1021.002` | *Unobserved* | Targets `psexec.exe` execution and `-accepteula`. Lateral movement was not triggered in Mordor trace. |
+| 11 | `sysmon_recon_whoami.yml` | `f2a3b4c5-6789-01ab-cdef-222222222222` | System Discovery via Whoami Command Execution | `process_creation` (windows) | `attack.discovery`<br>`attack.t1033` | **PASS** | Validated detection against Mordor JSON: `whoami.exe` execution with `userinit.exe` benign filter verified. |
+| 12 | `sysmon_reg_run_persistence.yml` | `f4a5b6c7-8901-23ab-cdef-444444444444` | Persistence via Registry Run Key Modification | `registry_set` (windows) | `attack.persistence`<br>`attack.t1547.001` | *Unobserved* | Sysmon Event 13 present in Mordor JSON (45 records), but no writes to `Run`/`RunOnce` keys occurred. |
+| 13 | `sysmon_service_creation.yml` | `e6f7a8b9-0123-45ab-cdef-666666666666` | Windows Service Installation via Service Control Manager | `system` (windows) | `attack.persistence`<br>`attack.privilege-escalation`<br>`attack.t1543.003` | **BLOCKED** | Targets System Event ID 7045. Windows System channel is absent from Mordor JSON dataset. |
+| 14 | `sysmon_valid_accounts.yml` | `a8b9c0d1-2345-67ab-cdef-888888888888` | Special Privileges Assigned to New Logon Session | `security` (windows) | `attack.privilege-escalation`<br>`attack.defense-evasion`<br>`attack.t1078` | **BLOCKED** | Targets Security Event ID 4672. All 10 dataset records were computer account `MONDORDC$` and filtered out. |
+| 15 | `sysmon_whoami_recon.yml` | `b9c0d1e2-3456-78ab-cdef-999999999999` | PowerShell ScriptBlock Logging - Credential Access Invocation | `powershell` (windows) | `attack.execution`<br>`attack.credential-access`<br>`attack.t1059.001`<br>`attack.t1003.001` | **FAIL** | 1,695 Event 4103 logs present, but plaintext `Invoke-Mimikatz` absent due to Empire in-memory dispatch. Legacy filename retained to preserve PRD tracking. |
+
+---
+
+## 5. Summary Coverage Metrics & Defensive Gap Synthesis
+
+### Quantitative Summary
+- **Total MITRE ATT&CK Techniques / Sub-Techniques Evaluated:** **22 distinct techniques** across **9 Enterprise tactics**.
+- **Total Production Rules Accounted For:** **15 rules** (14 single-event rules + 1 correlation rule) with 100% UUID uniqueness verified.
+- **Coverage Breakdown (22 Distinct Techniques):**
+  - **Validated detection:** **2 distinct techniques** (T1003.001 via Sysmon 10, T1033 via Sysmon 1).
+  - **Rule exists — telemetry validation incomplete:** **4 distinct techniques** (T1110, T1041, T1543.003, T1078) [accounting for 6 production rules when including unvalidated secondary rules for T1003.001 and the multi-event Correlation rule].
+  - **Partial coverage:** **6 distinct techniques** (T1059.001, T1059.003, T1027, T1021.002, T1547.001, T1048.003).
+  - **Telemetry gaps:** **4 distinct techniques** (T1071.001 Web C2, T1053.005 Scheduled Tasks, T1046 Network Scanning, T1047 WMI).
+  - **No rule mapped (Backlog Priorities):** **6 distinct techniques** (T1055 Process Injection, T1003.002 SAM Dumping, T1082 System Info Discovery, T1016 Network Config Discovery, T1562.001 Defense Impairment, T1070.001 Event Log Clearing).
+
+### Gap Analysis & Defensive Roadmap
+1. **Telemetry Augmentation:** Immediate collection of Windows Security Event ID 4625 (failed logons) and Windows System Event ID 7045 (service creation) is required to unblock validation of authentication and persistence rules.
+2. **Parser Enhancement:** Integrate an EVTX parsing dependency (`python-evtx`) into the automated test runner to programmatically evaluate `exec_sysmon_1_ftp.evtx`.
+3. **Correlation Backend Deployment:** Implement a stream-processing or SIEM correlation engine to automate the temporal evaluation of `correlation_ps_lsass_dump.yml`.
+4. **Adversary Emulation Grounding:** Author detections resilient against in-memory payload execution (e.g. Empire `Receive-AgentJob` execution patterns) rather than relying exclusively on un-obfuscated scriptblock strings.
