@@ -1,11 +1,12 @@
-title: Persistence via Windows Service Creation Control Manager
+title: Service Installation via SC.EXE
 id: f3a4b5c6-7890-12ab-cdef-333333333333
 status: test
-description: Detects creation of new Windows services via sc.exe for persistence or privilege escalation.
+description: Detects command-line creation of new Windows services via sc.exe for persistence or privilege escalation.
 references:
-    - https://attack.mitre.org/techniques/T1543.003/
+    - https://attack.mitre.org/techniques/T1543/003/
 author: Cyberion Defense Labs
 date: 2026/08/09
+modified: 2026/10/26
 tags:
     - attack.persistence
     - attack.privilege-escalation
@@ -19,5 +20,5 @@ detection:
         CommandLine|contains: 'create'
     condition: selection
 falsepositives:
-    - Software installers or legitimate IT administration automation tasks.
+    - Legitimate software installers or IT administration automation creating services via command line.
 level: medium
