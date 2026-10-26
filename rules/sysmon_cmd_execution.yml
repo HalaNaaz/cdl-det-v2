@@ -1,11 +1,12 @@
 title: Suspicious Command Shell Execution
 id: c4d5e6f7-8901-23ab-cdef-444444444444
 status: test
-description: Detects command shell execution spawning suspicious utilities or background discovery commands.
+description: Detects Windows Command Shell (cmd.exe) launching suspicious utility commands or reconnaissance operations.
 references:
     - https://attack.mitre.org/techniques/T1059/003/
 author: Cyberion Defense Labs
 date: 2026/08/05
+modified: 2026/10/26
 tags:
     - attack.execution
     - attack.t1059.003
@@ -18,7 +19,8 @@ detection:
         CommandLine|contains:
             - '/c whoami'
             - '/c net user'
+            - '/c net localgroup'
     condition: selection
 falsepositives:
-    - Normal system administration scripts.
+    - Normal system administration scripts and software deployment tasks.
 level: low
