@@ -1,25 +1,34 @@
 title: Encoded PowerShell Command Execution
 id: b3c4d5e6-7890-12ab-cdef-333333333333
 status: test
-description: Detects execution of PowerShell commands using encoded arguments (-e, -enc, -encodedcommand).
+description: Detects execution of PowerShell commands using encoded command-line arguments (-e, -enc, -encodedcommand), frequently used by post-exploitation frameworks to bypass inspection.
 references:
     - https://attack.mitre.org/techniques/T1059/001/
+    - https://attack.mitre.org/techniques/T1027/
 author: Cyberion Defense Labs
 date: 2026/08/05
+modified: 2026/10/26
 tags:
     - attack.execution
+    - attack.defense-evasion
     - attack.t1059.001
+    - attack.t1027
 logsource:
     category: process_creation
     product: windows
 detection:
     selection:
-        Image|endswith: '\powershell.exe'
+        Image|endswith:
+            - '\powershell.exe'
+            - '\pwsh.exe'
         CommandLine|contains:
             - ' -e '
             - ' -enc '
             - ' -encodedcommand '
+            - ' -ec '
+            - ' /e '
+            - ' /enc '
     condition: selection
 falsepositives:
-    - Legitimate administrative management scripts using encoded strings.
+    - Legitimate administrative management scripts using encoded strings for parameter escaping.
 level: medium

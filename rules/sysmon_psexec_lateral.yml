@@ -1,11 +1,12 @@
-title: PsExec Service Installation or Execution
+title: PsExec Lateral Movement Execution
 id: d5e6f7a8-9012-34ab-cdef-555555555555
 status: test
-description: Detects lateral movement activity via PsExec service installation or executable startup.
+description: Detects execution of PsExec or its remote service binary (PSEXESVC) used for lateral movement across Windows network environments.
 references:
     - https://attack.mitre.org/techniques/T1021/002/
 author: Cyberion Defense Labs
 date: 2026/08/05
+modified: 2026/10/26
 tags:
     - attack.lateral-movement
     - attack.t1021.002
@@ -14,8 +15,11 @@ logsource:
     product: windows
 detection:
     selection:
-        Image|endswith: '\psexec.exe'
+        Image|endswith:
+            - '\psexec.exe'
+            - '\psexec64.exe'
+            - '\psexesvc.exe'
     condition: selection
 falsepositives:
-    - Legitimate remote administration by network engineers.
+    - Legitimate remote systems administration by authorized network engineers.
 level: high
