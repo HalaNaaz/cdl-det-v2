@@ -1,20 +1,31 @@
-title: Suspicious Use of Valid Local Administrator Credentials
+title: Special Privileges Assigned to New Logon Session
 id: a8b9c0d1-2345-67ab-cdef-888888888888
 status: test
-description: Detects logon sessions involving built-in administrator accounts from unusual logon sources.
+description: Detects assignment of sensitive administrator-equivalent user rights (e.g. SeDebugPrivilege, SeBackupPrivilege) during a logon session, filtering standard machine accounts.
 references:
     - https://attack.mitre.org/techniques/T1078/
 author: Cyberion Defense Labs
 date: 2026/08/05
+modified: 2026/10/26
 tags:
+    - attack.privilege-escalation
+    - attack.defense-evasion
     - attack.t1078
 logsource:
-    category: process_creation
+    service: security
     product: windows
 detection:
     selection:
-        CommandLine|contains: 'Administrator'
-    condition: selection
+        EventID: 4672
+        PrivilegeList|contains:
+            - 'SeDebugPrivilege'
+            - 'SeBackupPrivilege'
+            - 'SeRestorePrivilege'
+            - 'SeTakeOwnershipPrivilege'
+            - 'SeTcbPrivilege'
+    filter_machine:
+        SubjectUserName|endswith: '$'
+    condition: selection and not filter_machine
 falsepositives:
-    - Routine IT support ticket resolutions.
-level: low
+    - Domain administrator interactive logons for planned infrastructure maintenance.
+level: medium
