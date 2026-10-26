@@ -1,21 +1,32 @@
-title: System User Discovery via Whoami
+title: PowerShell ScriptBlock Logging - Credential Access Invocation
 id: b9c0d1e2-3456-78ab-cdef-999999999999
 status: test
-description: Detects command-line execution of whoami for post-compromise privilege discovery.
+description: Detects execution of PowerShell script blocks containing suspicious credential dumping commands or post-exploitation keywords (e.g. Mimikatz, securlsa).
 references:
-    - https://attack.mitre.org/techniques/T1033/
+    - https://attack.mitre.org/techniques/T1059/001/
+    - https://attack.mitre.org/techniques/T1003/001/
 author: Cyberion Defense Labs
 date: 2026/08/05
+modified: 2026/10/26
 tags:
-    - attack.discovery
-    - attack.t1033
+    - attack.execution
+    - attack.credential-access
+    - attack.t1059.001
+    - attack.t1003.001
 logsource:
-    category: process_creation
+    service: powershell
     product: windows
 detection:
     selection:
-        Image|endswith: '\whoami.exe'
+        EventID:
+            - 4103
+            - 4104
+        Payload|contains:
+            - 'securlsa::logonpasswords'
+            - 'lsadump::sam'
+            - 'Invoke-Mimikatz'
+            - 'DumpCreds'
     condition: selection
 falsepositives:
-    - Administrator user context checks in scripts.
-level: low
+    - Authorized security testing scripts or administrative modules reviewing credential caches.
+level: high
