@@ -1,11 +1,12 @@
 title: Outbound Network Connection via FTP Executable
 id: f1a2b3c4-5678-90ab-cdef-111111111111
 status: test
-description: Detects FTP process establishing outbound network connections, which may indicate data exfiltration.
+description: Detects FTP process establishing outbound network connections to external destinations, indicative of potential data exfiltration.
 references:
     - https://attack.mitre.org/techniques/T1041/
 author: Cyberion Defense Labs
 date: 2026/08/09
+modified: 2026/10/26
 tags:
     - attack.exfiltration
     - attack.t1041
@@ -20,8 +21,9 @@ detection:
         DestinationIp|startswith:
             - '127.'
             - '10.'
+            - '172.16.'
             - '192.168.'
     condition: selection and not filter_local
 falsepositives:
-    - Legitimate automated backup transfers over FTP within trusted internal networks.
+    - Legitimate automated backup transfers over FTP within trusted networks.
 level: medium

@@ -1,11 +1,12 @@
 title: Outbound Network Connection Triggered by PowerShell
 id: f5a6b7c8-9012-34ab-cdef-555555555555
 status: test
-description: Detects PowerShell process establishing direct outbound network socket connections.
+description: Detects PowerShell process establishing direct outbound network socket connections to external destinations.
 references:
-    - https://attack.mitre.org/techniques/T1059.001/
+    - https://attack.mitre.org/techniques/T1059/001/
 author: Cyberion Defense Labs
 date: 2026/08/09
+modified: 2026/10/26
 tags:
     - attack.execution
     - attack.t1059.001
@@ -20,6 +21,7 @@ detection:
         Initiated: 'true'
     filter_internal:
         DestinationIp|startswith:
+            - '127.'
             - '10.'
             - '172.16.'
             - '192.168.'
