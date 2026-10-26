@@ -1,23 +1,33 @@
-title: LSASS Memory Dumping via Mimikatz Process Access
+title: LSASS Process Memory Access for Credential Dumping
 id: a2b3c4d5-6789-01ab-cdef-222222222222
 status: test
-description: Detects process access or execution targeting LSASS memory for credential dumping.
+description: Detects process handle requests accessing LSASS process memory with memory-read rights (e.g. 0x1010, 0x1F0FFF), indicative of credential dumping tools like Mimikatz.
 references:
     - https://attack.mitre.org/techniques/T1003/001/
 author: Cyberion Defense Labs
 date: 2026/08/05
+modified: 2026/10/26
 tags:
     - attack.credential-access
     - attack.t1003.001
 logsource:
-    category: process_creation
+    category: process_access
     product: windows
 detection:
     selection:
-        CommandLine|contains:
-            - 'securlsa::logonpasswords'
-            - 'lsadump::sam'
-    condition: selection
+        TargetImage|endswith: '\lsass.exe'
+        GrantedAccess|contains:
+            - '0x1010'    # PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ
+            - '0x1F0FFF'  # PROCESS_ALL_ACCESS
+            - '0x1410'    # PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ | PROCESS_QUERY_INFORMATION
+            - '0x10'      # PROCESS_VM_READ
+    filter_benign:
+        SourceImage|endswith:
+            - '\svchost.exe'
+            - '\csrss.exe'
+            - '\lsass.exe'
+            - '\lsm.exe'
+    condition: selection and not filter_benign
 falsepositives:
-    - Authorized penetration testing or security auditing activities.
+    - Legitimate endpoint protection agents, backup software, or diagnostic crash dump utilities.
 level: high
