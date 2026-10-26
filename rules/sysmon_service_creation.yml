@@ -1,22 +1,27 @@
-title: New Windows Service Created for Persistence
+title: Windows Service Installation via Service Control Manager
 id: e6f7a8b9-0123-45ab-cdef-666666666666
 status: test
-description: Detects creation of new Windows system services using sc.exe to maintain persistence.
+description: Detects the installation of a new Windows service via Service Control Manager event logs (Event ID 7045), providing host-level persistence detection.
 references:
     - https://attack.mitre.org/techniques/T1543/003/
 author: Cyberion Defense Labs
 date: 2026/08/05
+modified: 2026/10/26
 tags:
     - attack.persistence
+    - attack.privilege-escalation
     - attack.t1543.003
 logsource:
-    category: process_creation
+    service: system
     product: windows
 detection:
     selection:
-        Image|endswith: '\sc.exe'
-        CommandLine|contains: ' create '
-    condition: selection
+        EventID: 7045
+    filter_legit:
+        ServiceName:
+            - 'TrustedInstaller'
+            - 'MpKslDrv'
+    condition: selection and not filter_legit
 falsepositives:
-    - Software installers adding legitimate background services.
+    - Standard operating system updates and legitimate software packages registering new services.
 level: medium
