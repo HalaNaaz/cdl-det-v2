@@ -1,11 +1,12 @@
 title: Data Exfiltration via Command Line FTP
 id: f7a8b9c0-1234-56ab-cdef-777777777777
 status: test
-description: Detects potential exfiltration activity using interactive command-line FTP client scripts.
+description: Detects command-line execution of the native Windows FTP utility with script parameters (-s) to stage or exfiltrate data.
 references:
     - https://attack.mitre.org/techniques/T1041/
 author: Cyberion Defense Labs
 date: 2026/08/05
+modified: 2026/10/26
 tags:
     - attack.exfiltration
     - attack.t1041
@@ -15,8 +16,11 @@ logsource:
 detection:
     selection:
         Image|endswith: '\ftp.exe'
-        CommandLine|contains: ' -s:'
+        CommandLine|contains:
+            - ' -s:'
+            - ' /s:'
+            - ' -s '
     condition: selection
 falsepositives:
-    - Scheduled legacy backup tasks using FTP scripts.
+    - Scheduled legacy administrative backup jobs using automated FTP script instructions.
 level: medium
