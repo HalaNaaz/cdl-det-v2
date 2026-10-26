@@ -1,28 +1,25 @@
-title: Correlation - PowerShell Spawning LSASS Dumping Activity
+title: Correlation - PowerShell Execution Followed by LSASS Process Access
 id: c0d1e2f3-4567-89ab-cdef-101010101010
-status: test
-description: Sequential correlation rule detecting PowerShell launching subprocesses that target LSASS memory.
+status: experimental
+description: Correlates an interactive PowerShell execution event with subsequent handle access to LSASS process memory on the same endpoint within 1 minute.
 references:
     - https://attack.mitre.org/techniques/T1003/001/
     - https://attack.mitre.org/techniques/T1059/001/
 author: Cyberion Defense Labs
 date: 2026/08/05
+modified: 2026/10/26
 tags:
     - attack.credential-access
     - attack.execution
     - attack.t1003.001
     - attack.t1059.001
-logsource:
-    category: process_creation
-    product: windows
-detection:
-    parent_process:
-        ParentImage|endswith: '\powershell.exe'
-    child_process:
-        CommandLine|contains:
-            - 'securlsa'
-            - 'lsass'
-    condition: parent_process and child_process
-falsepositives:
-    - None expected in standard production environments.
+action: correlation
+type: temporal
+rule:
+    - b3c4d5e6-7890-12ab-cdef-333333333333
+    - a2b3c4d5-6789-01ab-cdef-222222222222
+group-by:
+    - ComputerName
+timespan: 1m
+ordered: true
 level: high
